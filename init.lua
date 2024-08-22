@@ -227,7 +227,51 @@ vim.opt.rtp:prepend(lazypath)
 --    :Lazy update
 --
 -- NOTE: Here is where you install your plugins.
+
+LLM = 'deepseek-coder:1.3b-base-q4_K_M'
+LLM = 'codellama:7b-code-q2_K'
+LLM = 'stable-code:3b-code-q4_K_M'
+LLM = 'codellama:7b-code-q4_K_M'
+LLM = 'wizardlm2:7b-q4_K_M'
+LLM = 'phi3:mini'
+LLM = 'codellama:7b-code'
+
 require('lazy').setup({
+  { 'CRAG666/code_runner.nvim', config = true },
+  { 'nvim-lua/plenary.nvim' },
+  { 'tzachar/cmp-ai', dependencies = 'nvim-lua/plenary.nvim' },
+  { 'hrsh7th/nvim-cmp', dependencies = { 'tzachar/cmp-ai' } },
+  {
+    'David-Kunz/gen.nvim',
+    opts = {
+      -- model = 'mistral', -- The default model to use.
+      model = LLM, -- The default model to use.
+      quit_map = 'q', -- set keymap for close the response window
+      retry_map = '<c-r>', -- set keymap to re-send the current prompt
+      accept_map = '<c-cr>', -- set keymap to replace the previous selection with the last result
+      host = 'localhost', -- The host running the Ollama service.
+      port = '11434', -- The port on which the Ollama service is listening.
+      display_mode = 'float', -- The display mode. Can be "float" or "split" or "horizontal-split".
+      show_prompt = false, -- Shows the prompt submitted to Ollama.
+      show_model = false, -- Displays which model you are using at the beginning of your chat session.
+      no_auto_close = false, -- Never closes the window automatically.
+      hidden = false, -- Hide the generation window (if true, will implicitly set `prompt.replace = true`), requires Neovim >= 0.10
+      init = function(options)
+        pcall(io.popen, 'ollama serve > /dev/null 2>&1 &')
+      end,
+      -- Function to initialize Ollama
+      command = function(options)
+        local body = { model = options.model, stream = true }
+        return 'curl --silent --no-buffer -X POST http://' .. options.host .. ':' .. options.port .. '/api/chat -d $body'
+      end,
+      -- The command for the Ollama service. You can use placeholders $prompt, $model and $body (shellescaped).
+      -- This can also be a command string.
+      -- The executed command must return a JSON object with { response, context }
+      -- (context property is optional).
+      -- list_models = '<omitted lua function>', -- Retrieves a list of model names
+      debug = false, -- Prints errors and the command which is run.
+    },
+  },
   -- NOTE: Plugins can be added with a link (or for a github repo: 'owner/repo' link).
   'tpope/vim-sleuth', -- Detect tabstop and shiftwidth automatically
 
@@ -715,12 +759,41 @@ require('lazy').setup({
           end,
         },
         completion = { completeopt = 'menu,menuone,noinsert' },
+        --[[
+        compare = require 'cmp.config.compare'
+        cmp.setup {
+          sorting = {
+            priority_weight = 2,
+            comparators = {
+              require 'cmp_ai.compare',
+              compare.offset,
+              compare.exact,
+              compare.score,
+              compare.recently_used,
+              compare.kind,
+              compare.sort_text,
+              compare.length,
+              compare.order,
+            },
+          },
+        }
+--]]
 
         -- For an understanding of why these mappings were
         -- chosen, you will need to read `:help ins-completion`
         --
         -- No, but seriously. Please read `:help ins-completion`, it is really good!
         mapping = cmp.mapping.preset.insert {
+          ['<C-x>'] = cmp.mapping(
+            cmp.mapping.complete {
+              config = {
+                sources = cmp.config.sources {
+                  { name = 'cmp_ai' },
+                },
+              },
+            },
+            { 'i' }
+          ),
           -- Select the [n]ext item
           ['<C-n>'] = cmp.mapping.select_next_item(),
           -- Select the [p]revious item
@@ -777,6 +850,7 @@ require('lazy').setup({
           { name = 'nvim_lsp' },
           { name = 'luasnip' },
           { name = 'path' },
+          { name = 'cmp_ai' },
         },
       }
     end,
@@ -844,7 +918,7 @@ require('lazy').setup({
     'nvim-treesitter/nvim-treesitter',
     build = ':TSUpdate',
     opts = {
-      ensure_installed = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc' },
+      ensure_installed = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc', 'python', 'perl', 'rust' },
       -- Autoinstall languages that are not installed
       auto_install = true,
       highlight = {
@@ -915,5 +989,82 @@ require('lazy').setup({
   },
 })
 
+cmp_ai = require 'cmp_ai.config'
+cmp_ai:setup {
+  max_lines = 10,
+  provider = 'Ollama',
+  provider_options = {
+    --model = 'mistral',
+    model = LLM,
+  },
+  notify = true,
+  notify_callback = function(msg)
+    vim.notify(msg)
+  end,
+  run_on_every_keystroke = true,
+  ignored_file_types = {
+    -- default is not to ignore
+    -- uncomment to ignore in lua:
+    -- lua = true
+  },
+}
+
+function init_ai()
+  require('lazy').setup {
+    { 'hrsh7th/nvim-cmp', dependencies = { 'tzachar/cmp-ai' } },
+  }
+end
+
+require('code_runner').setup {
+  filetype = {
+    java = {
+      'cd $dir &&',
+      'javac $fileName &&',
+      'java $fileNameWithoutExt',
+    },
+    python = 'python3 -u',
+    typescript = 'deno run',
+    rust = {
+      'cd $dir &&',
+      'rustc $fileName &&',
+      '$dir/$fileNameWithoutExt',
+    },
+    c = function(...)
+      c_base = {
+        'cd $dir &&',
+        'gcc $fileName -o',
+        '/tmp/$fileNameWithoutExt',
+      }
+      local c_exec = {
+        '&& /tmp/$fileNameWithoutExt &&',
+        'rm /tmp/$fileNameWithoutExt',
+      }
+      vim.ui.input({ prompt = 'Add more args:' }, function(input)
+        c_base[4] = input
+        vim.print(vim.tbl_extend('force', c_base, c_exec))
+        require('code_runner.commands').run_from_fn(vim.list_extend(c_base, c_exec))
+      end)
+    end,
+  },
+}
+vim.keymap.set('n', '<leader>r', ':RunCode<CR>', { noremap = true, silent = false })
+vim.keymap.set('n', '<leader>rf', ':RunFile<CR>', { noremap = true, silent = false })
+vim.keymap.set('n', '<leader>rft', ':RunFile tab<CR>', { noremap = true, silent = false })
+vim.keymap.set('n', '<leader>rp', ':RunProject<CR>', { noremap = true, silent = false })
+vim.keymap.set('n', '<leader>rc', ':RunClose<CR>', { noremap = true, silent = false })
+vim.keymap.set('n', '<leader>crf', ':CRFiletype<CR>', { noremap = true, silent = false })
+vim.keymap.set('n', '<leader>crp', ':CRProjects<CR>', { noremap = true, silent = false })
+
+vim.cmd 'set mouse=' -- Mouse seems to break my terminals copy and paste
+vim.cmd 'nnoremap Y Y' -- Get old behaviour back where you could copy an entire line with Y
+
+vim.keymap.set({ 'n', 'v' }, '<leader>]', ':Gen<CR>')
+vim.keymap.set('v', '<leader>]', ':Gen Enhance_Grammar_Spelling<CR>')
+vim.keymap.set({ 'n', 'v' }, '<C-x>', 'init_ai()')
+
+-- Hello how are you? I am fine. What is y
+--
+--
+--                      --
 -- The line beneath this is called `modeline`. See `:help modeline`
 -- vim: ts=2 sts=2 sw=2 et
