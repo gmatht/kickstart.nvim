@@ -229,18 +229,25 @@ vim.opt.rtp:prepend(lazypath)
 -- NOTE: Here is where you install your plugins.
 
 LLM = 'deepseek-coder:1.3b-base-q4_K_M'
-LLM = 'codellama:7b-code-q2_K'
 LLM = 'stable-code:3b-code-q4_K_M'
 LLM = 'codellama:7b-code-q4_K_M'
 LLM = 'wizardlm2:7b-q4_K_M'
 LLM = 'phi3:mini'
+LLM = 'codellama:7b-code-q2_K'
+LLM = 'codellama:instruct'
 LLM = 'codellama:7b-code'
+
+vim.g.tabby_keybinding_accept = '<Tab>'
 
 require('lazy').setup({
   { 'CRAG666/code_runner.nvim', config = true },
   { 'nvim-lua/plenary.nvim' },
-  { 'tzachar/cmp-ai', dependencies = 'nvim-lua/plenary.nvim' },
-  { 'hrsh7th/nvim-cmp', dependencies = { 'tzachar/cmp-ai' } },
+  { 'TabbyML/vim-tabby' },
+  { 'AckslD/nvim-neoclip.lua' },
+  --  { 'tzachar/cmp-ai', dependencies = 'nvim-lua/plenary.nvim' },
+  --  { 'hrsh7th/nvim-cmp', dependencies = { 'tzachar/cmp-ai' } },
+
+  --[[
   {
     'David-Kunz/gen.nvim',
     opts = {
@@ -249,7 +256,8 @@ require('lazy').setup({
       quit_map = 'q', -- set keymap for close the response window
       retry_map = '<c-r>', -- set keymap to re-send the current prompt
       accept_map = '<c-cr>', -- set keymap to replace the previous selection with the last result
-      host = 'localhost', -- The host running the Ollama service.
+      -- host = 'localhost', -- The host running the Ollama service.
+      host = '192.168.1.213', -- The host running the Ollama service.
       port = '11434', -- The port on which the Ollama service is listening.
       display_mode = 'float', -- The display mode. Can be "float" or "split" or "horizontal-split".
       show_prompt = false, -- Shows the prompt submitted to Ollama.
@@ -272,6 +280,7 @@ require('lazy').setup({
       debug = false, -- Prints errors and the command which is run.
     },
   },
+--]]
   -- NOTE: Plugins can be added with a link (or for a github repo: 'owner/repo' link).
   'tpope/vim-sleuth', -- Detect tabstop and shiftwidth automatically
 
@@ -989,13 +998,15 @@ require('lazy').setup({
   },
 })
 
+--[[
 cmp_ai = require 'cmp_ai.config'
 cmp_ai:setup {
-  max_lines = 10,
+  max_lines = 3,
   provider = 'Ollama',
   provider_options = {
     --model = 'mistral',
     model = LLM,
+    num_predict = 10,
   },
   notify = true,
   notify_callback = function(msg)
@@ -1015,6 +1026,8 @@ function init_ai()
   }
 end
 
+--]]
+
 require('code_runner').setup {
   filetype = {
     java = {
@@ -1022,7 +1035,9 @@ require('code_runner').setup {
       'javac $fileName &&',
       'java $fileNameWithoutExt',
     },
-    python = 'python3 -u',
+    -- python = 'python3 -u',
+    python = 'python3 /home/john/src/joshell/py/fixpy.py -u',
+    lua = 'luajit',
     typescript = 'deno run',
     rust = {
       'cd $dir &&',
@@ -1054,6 +1069,7 @@ vim.keymap.set('n', '<leader>rp', ':RunProject<CR>', { noremap = true, silent = 
 vim.keymap.set('n', '<leader>rc', ':RunClose<CR>', { noremap = true, silent = false })
 vim.keymap.set('n', '<leader>crf', ':CRFiletype<CR>', { noremap = true, silent = false })
 vim.keymap.set('n', '<leader>crp', ':CRProjects<CR>', { noremap = true, silent = false })
+vim.keymap.set('n', '<leader>p', ':Telescope neoclip<CR>', { noremap = true, silent = false })
 
 vim.cmd 'set mouse=' -- Mouse seems to break my terminals copy and paste
 vim.cmd 'nnoremap Y Y' -- Get old behaviour back where you could copy an entire line with Y
@@ -1061,6 +1077,70 @@ vim.cmd 'nnoremap Y Y' -- Get old behaviour back where you could copy an entire 
 vim.keymap.set({ 'n', 'v' }, '<leader>]', ':Gen<CR>')
 vim.keymap.set('v', '<leader>]', ':Gen Enhance_Grammar_Spelling<CR>')
 vim.keymap.set({ 'n', 'v' }, '<C-x>', 'init_ai()')
+--vim.keymap.set({ 'n', 'v' }, '<C-t>', ':Telescope neoclip')
+
+require('neoclip').setup {
+  history = 1000,
+  enable_persistent_history = false,
+  length_limit = 1048576,
+  continuous_sync = false,
+  db_path = vim.fn.stdpath 'data' .. '/databases/neoclip.sqlite3',
+  filter = nil,
+  preview = true,
+  prompt = nil,
+  default_register = '"',
+  default_register_macros = 'q',
+  enable_macro_history = true,
+  content_spec_column = false,
+  disable_keycodes_parsing = false,
+  on_select = {
+    move_to_front = false,
+    close_telescope = true,
+  },
+  on_paste = {
+    set_reg = false,
+    move_to_front = false,
+    close_telescope = true,
+  },
+  on_replay = {
+    set_reg = false,
+    move_to_front = false,
+    close_telescope = true,
+  },
+  on_custom_action = {
+    close_telescope = true,
+  },
+  keys = {
+    telescope = {
+      i = {
+        select = '<cr>',
+        paste = '<c-p>',
+        paste_behind = '<c-k>',
+        replay = '<c-q>', -- replay a macro
+        delete = '<c-d>', -- delete an entry
+        edit = '<c-e>', -- edit an entry
+        custom = {},
+      },
+      n = {
+        select = '<cr>',
+        paste = 'p',
+        --- It is possible to map to more than one key.
+        -- paste = { 'p', '<c-p>' },
+        paste_behind = 'P',
+        replay = 'q',
+        delete = 'd',
+        edit = 'e',
+        custom = {},
+      },
+    },
+    fzf = {
+      select = 'default',
+      paste = 'ctrl-p',
+      paste_behind = 'ctrl-k',
+      custom = {},
+    },
+  },
+}
 
 -- Hello how are you? I am fine. What is y
 --
