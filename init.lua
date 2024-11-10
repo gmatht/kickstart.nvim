@@ -324,7 +324,7 @@ require('lazy').setup({
   -- after the plugin has been loaded:
   --  config = function() ... end
 
-  { -- Useful plugin to show you pending keybinds.
+  {                     -- Useful plugin to show you pending keybinds.
     'folke/which-key.nvim',
     event = 'VimEnter', -- Sets the loading event to 'VimEnter'
     config = function() -- This is the function that runs, AFTER loading
@@ -372,7 +372,7 @@ require('lazy').setup({
       { 'nvim-telescope/telescope-ui-select.nvim' },
 
       -- Useful for getting pretty icons, but requires a Nerd Font.
-      { 'nvim-tree/nvim-web-devicons', enabled = vim.g.have_nerd_font },
+      { 'nvim-tree/nvim-web-devicons',            enabled = vim.g.have_nerd_font },
     },
     config = function()
       -- Telescope is a fuzzy finder that comes with a lot of different things that
@@ -468,7 +468,7 @@ require('lazy').setup({
       },
     },
   },
-  { 'Bilal2453/luvit-meta', lazy = true },
+  { 'Bilal2453/luvit-meta',     lazy = true },
   {
     -- Main LSP Configuration
     'neovim/nvim-lspconfig',
@@ -480,7 +480,7 @@ require('lazy').setup({
 
       -- Useful status updates for LSP.
       -- NOTE: `opts = {}` is the same as calling `require('fidget').setup({})`
-      { 'j-hui/fidget.nvim', opts = {} },
+      { 'j-hui/fidget.nvim',       opts = {} },
 
       -- Allows extra capabilities provided by nvim-cmp
       'hrsh7th/cmp-nvim-lsp',
@@ -1071,7 +1071,7 @@ vim.keymap.set('n', '<leader>crf', ':CRFiletype<CR>', { noremap = true, silent =
 vim.keymap.set('n', '<leader>crp', ':CRProjects<CR>', { noremap = true, silent = false })
 vim.keymap.set('n', '<leader>p', ':Telescope neoclip<CR>', { noremap = true, silent = false })
 
-vim.cmd 'set mouse=' -- Mouse seems to break my terminals copy and paste
+vim.cmd 'set mouse='   -- Mouse seems to break my terminals copy and paste
 vim.cmd 'nnoremap Y Y' -- Get old behaviour back where you could copy an entire line with Y
 
 vim.keymap.set({ 'n', 'v' }, '<leader>]', ':Gen<CR>')
@@ -1118,7 +1118,7 @@ require('neoclip').setup {
         paste_behind = '<c-k>',
         replay = '<c-q>', -- replay a macro
         delete = '<c-d>', -- delete an entry
-        edit = '<c-e>', -- edit an entry
+        edit = '<c-e>',   -- edit an entry
         custom = {},
       },
       n = {
@@ -1142,9 +1142,7 @@ require('neoclip').setup {
   },
 }
 
--- Hello how are you? I am fine. What is y
---
---
---                      --
+vim.cmd('au BufWritePost,BufWritePre * !quickbak %')
+
 -- The line beneath this is called `modeline`. See `:help modeline`
 -- vim: ts=2 sts=2 sw=2 et

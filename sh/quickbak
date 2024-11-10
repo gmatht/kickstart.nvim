@@ -1,0 +1,21 @@
+BAKDIR=~/.local/quickbak
+
+#:au BufWritePost,BufWritePre * !quickbak %
+#Add to init.lua:
+#	vim.cmd('au BufWritePost,BufWritePre * !quickbak %')
+
+[ -e $BAKDIR ] || ( mkdir -p $BAKDIR && cd $BAKDIR && git init )
+
+function realpath { echo "$(cd "$(dirname "$1")"; pwd)/$(basename "$1")"; }
+
+ABS="$(realpath "$1")"
+BASE="$(basename "$1")"
+
+if cp "$1" $BAKDIR && cd $BAKDIR
+then
+	git add "$BASE"
+	git commit "$BASE" -m "$HOSTNAME: $ABS" 
+	[ -z "$(git diff "$BASE")" ] || mv "$BASE" "$BASE".`date +'%Y%m%d_%H%M%S_%3N'`.qb_tmp
+else
+	cp "$1" ~/EMERGENCY_SAVE.$BASE.`date +'%Y%m%d_%H%M%S_%3N'`
+fi
